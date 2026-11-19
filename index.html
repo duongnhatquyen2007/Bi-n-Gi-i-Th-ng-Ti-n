@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Biên Giới Thẳng Tiến — Mô phỏng Vận tải Xuyên Biên giới</title>
+    <meta name="description" content="Game mô phỏng lái xe đầu kéo container vật lý 2D xuyên biên giới Việt Nam từ cảng biển đến cửa khẩu quốc tế." />
+    <meta property="og:title" content="Biên Giới Thẳng Tiến" />
+    <meta property="og:description" content="Game mô phỏng lái xe đầu kéo container vật lý 2D xuyên biên giới Việt Nam." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  </head>
+  <body class="bg-slate-950 text-slate-100 select-none overflow-hidden">
+    <div id="appRoot" class="game-shell">
+      <canvas id="gameCanvas" aria-label="Màn hình chơi game Biên Giới Thẳng Tiến"></canvas>
+
+      <!-- INTRO STORY OVERLAY (3 SCENES) -->
+      <section id="introOverlay" class="overlay-screen hidden" aria-label="Lời dẫn nhập">
+        <div class="intro-backdrop" id="introSceneBg"></div>
+        <div class="intro-panel">
+          <div class="intro-meta">
+            <span id="introSceneStep">Khung cảnh 1 / 3</span>
+            <button type="button" id="btnSkipIntro" class="btn-ghost btn-sm">Bỏ qua giới thiệu</button>
+          </div>
+          <h2 id="introSceneTitle" class="intro-title">Bến cảng đêm — Tàu vừa cập bến</h2>
+          <div id="introDialogueBox" class="intro-dialogue"></div>
+          <div class="intro-actions">
+            <button type="button" id="btnNextIntro" class="btn-primary">Tiếp tục</button>
+          </div>
+          <div class="copyright-line">Copyright 2026 by Trung tâm DNQ Production</div>
+        </div>
+      </section>
+
+      <!-- MAIN MENU SCREEN -->
+      <section id="menuOverlay" class="overlay-screen menu-screen hidden" aria-label="Menu chính">
+        <div class="menu-container">
+          <header class="menu-header">
+            <div class="brand-block">
+              <h1 class="game-title">Biên Giới Thẳng Tiến</h1>
+              <p class="game-subtitle">Vận tải Container Xuyên Biên Giới Việt Nam</p>
+            </div>
+            <div class="career-summary">
+              <div class="stat-readout">
+                <span class="stat-label">Tiền cước</span>
+                <span id="menuMoney" class="stat-value tabular-nums text-amber">500.000 VNĐ</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-readout">
+                <span class="stat-label">Uy tín</span>
+                <span id="menuReputation" class="stat-value tabular-nums text-emerald">100 điểm</span>
+              </div>
+            </div>
+          </header>
+
+          <div class="menu-grid">
+            <div class="menu-section">
+              <div class="section-head">
+                <h2>01. Chọn tuyến đường vận tải</h2>
+                <span class="section-hint">Hoàn thành tuyến trước để mở tuyến kế tiếp</span>
+              </div>
+              <div id="routeCards" class="cards-stack"></div>
+            </div>
+
+            <div class="menu-section">
+              <div class="section-head">
+                <h2>02. Chọn đơn hàng xuất khẩu</h2>
+                <span class="section-hint">Cân đối tải trọng, độ xóc và thưởng cước</span>
+              </div>
+              <div id="cargoCards" class="cards-stack"></div>
+
+              <div class="controls-guide">
+                <div class="guide-title">Điều khiển nhanh (PC / Mobile)</div>
+                <div class="guide-grid">
+                  <span><b>D / →</b> Ga tiến</span>
+                  <span><b>A / ←</b> Phanh / Giữ lùi</span>
+                  <span><b>Space</b> Phanh tay</span>
+                  <span><b>H</b> Còi hơi (450px)</span>
+                  <span><b>L</b> Đèn pha (500px)</span>
+                  <span><b>E</b> Bơm dầu / Sửa / Thông quan</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <footer class="menu-footer">
+            <div class="menu-secondary-actions">
+              <button type="button" id="btnOpenGarage" class="btn-secondary">Garage Nâng Cấp</button>
+              <button type="button" id="btnOpenHistory" class="btn-secondary">Lịch Sử Chuyến Hàng</button>
+              <button type="button" id="btnExportSaveMenu" class="btn-secondary">Tải xuống hồ sơ tài xế (.json)</button>
+              <a href="/BienGioiThangTien_FullGame.zip" download="BienGioiThangTien_FullGame.zip" class="btn-secondary btn-link">Tải toàn bộ game (.zip)</a>
+              <button type="button" id="btnToggleSoundMenu" class="btn-ghost">Âm thanh: Bật</button>
+            </div>
+            <button type="button" id="btnStartTrip" class="btn-primary btn-lg">Xuất Phát Ngay</button>
+          </footer>
+          <div class="copyright-line">Copyright 2026 by Trung tâm DNQ Production</div>
+        </div>
+      </section>
+
+      <!-- GAMEPLAY HUD -->
+      <div id="hudOverlay" class="hud-layer hidden" aria-label="Bảng thông số khi lái xe">
+        <div class="hud-top">
+          <!-- Top Left: 3 Vital Bars -->
+          <div class="hud-vitals">
+            <div class="vital-row">
+              <div class="vital-label-row">
+                <span class="vital-name">Nhiên liệu</span>
+                <span id="hudFuelText" class="vital-num tabular-nums">100%</span>
+              </div>
+              <div class="bar-track">
+                <div id="hudFuelBar" class="bar-fill bar-fuel" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <div class="vital-row">
+              <div class="vital-label-row">
+                <span class="vital-name">Độ bền xe</span>
+                <span id="hudHpText" class="vital-num tabular-nums">100%</span>
+              </div>
+              <div class="bar-track">
+                <div id="hudHpBar" class="bar-fill bar-hp" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <div class="vital-row">
+              <div class="vital-label-row">
+                <span class="vital-name">Nguyên vẹn hàng</span>
+                <span id="hudCargoText" class="vital-num tabular-nums">100%</span>
+              </div>
+              <div class="bar-track bar-track-cargo">
+                <div class="cargo-min-marker" title="Ngưỡng thông quan tối thiểu 50%"></div>
+                <div id="hudCargoBar" class="bar-fill bar-cargo" style="width: 100%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Center: Route Progress Minimap + Deadline -->
+          <div class="hud-center">
+            <div class="minimap-box">
+              <div class="minimap-endpoints">
+                <span id="hudOriginName">Cảng Cát Lái</span>
+                <span id="hudDistanceText" class="tabular-nums">0 / 3000m</span>
+                <span id="hudDestName">Cửa khẩu Mộc Bài</span>
+              </div>
+              <div class="minimap-track" id="minimapTrack">
+                <div class="minimap-progress" id="minimapProgress"></div>
+                <div id="minimapMarkers" class="minimap-markers"></div>
+                <div id="minimapTruck" class="minimap-truck" title="Vị trí xe tải"></div>
+              </div>
+            </div>
+            <div class="deadline-box" id="hudDeadlineBox">
+              <span class="deadline-label">Cửa khẩu đóng sau:</span>
+              <span id="hudDeadlineText" class="deadline-value tabular-nums">02:30</span>
+            </div>
+          </div>
+
+          <!-- Top Right: Money, Reputation, Sound, Pause -->
+          <div class="hud-right">
+            <div class="hud-economy">
+              <div id="hudMoney" class="hud-money tabular-nums">500.000 VNĐ</div>
+              <div id="hudReputation" class="hud-rep tabular-nums">Uy tín: 100</div>
+            </div>
+            <div class="hud-actions">
+              <button type="button" id="btnToggleSoundHud" class="hud-icon-btn" title="Bật/Tắt âm thanh" aria-label="Bật hoặc tắt âm thanh">Loa</button>
+              <button type="button" id="btnPauseGame" class="hud-icon-btn" title="Tạm dừng (ESC / P)" aria-label="Tạm dừng">II</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Toast / Event Banner -->
+        <div id="hudToastContainer" class="hud-toasts" aria-live="polite"></div>
+
+        <!-- Station / Gate Interactive Prompt -->
+        <div id="stationPrompt" class="station-prompt hidden">
+          <div id="stationPromptTitle" class="station-prompt-title">Trạm Xăng Dầu</div>
+          <div id="stationPromptDesc" class="station-prompt-desc">Dừng xe (&lt; 5 km/h) và giữ phím [E] để bơm nhiên liệu</div>
+        </div>
+
+        <!-- Bottom Bar: Desktop Speedometer & Mobile Touch Controls -->
+        <div class="hud-bottom">
+          <!-- Left Touch Cluster (Horn, Lights, Interact) -->
+          <div id="touchLeftCluster" class="touch-cluster touch-left">
+            <button type="button" id="btnTouchHorn" class="touch-btn touch-utility" data-control="horn">
+              <span class="touch-key">H</span>
+              <span class="touch-text">Còi hơi</span>
+            </button>
+            <button type="button" id="btnTouchLights" class="touch-btn touch-utility" data-control="lights">
+              <span class="touch-key">L</span>
+              <span class="touch-text">Đèn pha</span>
+            </button>
+            <button type="button" id="btnTouchInteract" class="touch-btn touch-interact hidden" data-control="interact">
+              <span class="touch-key">E</span>
+              <span class="touch-text">Tương tác</span>
+            </button>
+          </div>
+
+          <!-- Speedometer & Active States (Always Visible) -->
+          <div class="speedo-panel">
+            <div class="speedo-main">
+              <span id="hudSpeedValue" class="speedo-num tabular-nums">0</span>
+              <span class="speedo-unit">km/h</span>
+            </div>
+            <div class="speedo-indicators">
+              <span id="indLights" class="ind-item">Đèn: Tắt</span>
+              <span class="ind-sep">·</span>
+              <span id="indHandbrake" class="ind-item">Phanh tay</span>
+              <span class="ind-sep hidden" id="indStrapSep">·</span>
+              <span id="indStrapBoost" class="ind-item hidden text-emerald">Gia cố: 12s</span>
+            </div>
+          </div>
+
+          <!-- Right Touch Cluster (Handbrake, Brake/Reverse, Gas) -->
+          <div id="touchRightCluster" class="touch-cluster touch-right">
+            <button type="button" id="btnTouchHandbrake" class="touch-btn touch-handbrake" data-control="handbrake">
+              <span class="touch-key">P</span>
+              <span class="touch-text">Phanh tay</span>
+            </button>
+            <button type="button" id="btnTouchBrake" class="touch-btn touch-pedal pedal-brake" data-control="brake">
+              <span class="touch-text">Phanh / Lùi</span>
+            </button>
+            <button type="button" id="btnTouchGas" class="touch-btn touch-pedal pedal-gas" data-control="gas">
+              <span class="touch-text">Ga tiến</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAUSE MODAL -->
+      <section id="pauseModal" class="modal-backdrop hidden" aria-label="Tạm dừng">
+        <div class="modal-card modal-sm">
+          <h2 class="modal-title">Tạm Dừng Hành Trình</h2>
+          <p class="modal-subtitle" id="pauseRouteSummary">Tuyến Cảng Cát Lái — Cửa khẩu Mộc Bài</p>
+          <div class="modal-actions-col">
+            <button type="button" id="btnResumeGame" class="btn-primary">Tiếp tục lái</button>
+            <button type="button" id="btnRestartFromPause" class="btn-secondary">Khởi hành lại tuyến này</button>
+            <button type="button" id="btnMenuFromPause" class="btn-ghost">Về Menu chính</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- GARAGE UPGRADE MODAL -->
+      <section id="garageModal" class="modal-backdrop hidden" aria-label="Garage nâng cấp xe">
+        <div class="modal-card modal-lg">
+          <div class="modal-header">
+            <div>
+              <h2 class="modal-title">Garage Nâng Cấp Đầu Kéo</h2>
+              <p class="modal-subtitle">Cải thiện hiệu suất leo đèo, tiết kiệm dầu và bảo vệ hàng hóa (Cấp 1–5)</p>
+            </div>
+            <div class="garage-balance">
+              <span class="stat-label">Ngân sách:</span>
+              <span id="garageMoney" class="stat-value tabular-nums text-amber">500.000 VNĐ</span>
+            </div>
+          </div>
+          <div id="garageUpgradeList" class="upgrade-grid"></div>
+          <div class="modal-footer">
+            <button type="button" id="btnCloseGarage" class="btn-primary">Hoàn tất &amp; Quay lại</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- HISTORY & JSON SYNC MODAL -->
+      <section id="historyModal" class="modal-backdrop hidden" aria-label="Lịch sử chuyến hàng và đồng bộ dữ liệu">
+        <div class="modal-card modal-xl">
+          <div class="modal-header">
+            <div>
+              <h2 class="modal-title">Nhật Ký Chuyến Hàng &amp; Đồng Bộ Đa Thiết Bị</h2>
+              <p class="modal-subtitle">Lưu tối đa 50 chuyến gần nhất · Hỗ trợ xuất/nhập hồ sơ .JSON với thuật toán gộp thông minh</p>
+            </div>
+            <button type="button" id="btnCloseHistory" class="btn-ghost">Đóng</button>
+          </div>
+
+          <div class="sync-toolbar">
+            <div class="sync-actions">
+              <button type="button" id="btnExportSave" class="btn-primary">Tải xuống hồ sơ tài xế (.json)</button>
+              <label for="inputImportSave" class="btn-secondary file-upload-label">
+                Tải lên hồ sơ tài xế
+                <input type="file" id="inputImportSave" accept=".json,application/json" class="sr-only" />
+              </label>
+              <button type="button" id="btnClearHistory" class="btn-ghost btn-danger-outline">Xóa lịch sử</button>
+            </div>
+            <div id="syncFeedback" class="sync-feedback"></div>
+          </div>
+
+          <div id="clearHistoryConfirmBox" class="confirm-bar hidden">
+            <span>Bạn có chắc chắn muốn xóa toàn bộ nhật ký 50 chuyến hàng trên thiết bị này không?</span>
+            <div class="confirm-bar-actions">
+              <button type="button" id="btnConfirmClearHistory" class="btn-danger btn-sm">Xác nhận xóa</button>
+              <button type="button" id="btnCancelClearHistory" class="btn-ghost btn-sm">Hủy</button>
+            </div>
+          </div>
+
+          <div class="history-table-wrap">
+            <table class="history-table">
+              <thead>
+                <tr>
+                  <th>Thời gian</th>
+                  <th>Tuyến đường (Cảng → Cửa khẩu)</th>
+                  <th>Loại hàng</th>
+                  <th>Độ nguyên vẹn</th>
+                  <th>Tiền cước nhận</th>
+                  <th>Thiết bị chơi</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody"></tbody>
+            </table>
+            <div id="historyEmptyState" class="history-empty hidden">
+              Chưa có chuyến hàng nào được ghi nhận. Hãy hoàn thành tuyến đầu tiên để lưu biên bản thông quan!
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VICTORY MODAL (BIEN BAN THONG QUAN) -->
+      <section id="victoryModal" class="modal-backdrop hidden" aria-label="Biên bản thông quan">
+        <div class="modal-card modal-md receipt-card">
+          <div class="receipt-stamp" aria-hidden="true">ĐÃ THÔNG QUAN</div>
+          <h2 class="modal-title text-emerald">Thông Quan Thành Công</h2>
+          <p class="modal-subtitle" id="victoryRouteLabel">Cảng Cát Lái → Cửa khẩu Mộc Bài</p>
+
+          <dl class="receipt-list">
+            <div class="receipt-row">
+              <dt>Loại hàng hóa</dt>
+              <dd id="vicCargoType">Hàng phổ thông</dd>
+            </div>
+            <div class="receipt-row">
+              <dt>Thời gian hoàn thành</dt>
+              <dd id="vicTime" class="tabular-nums">115 giây (dư 35s)</dd>
+            </div>
+            <div class="receipt-row">
+              <dt>Độ nguyên vẹn hàng</dt>
+              <dd id="vicIntegrity" class="tabular-nums">96%</dd>
+            </div>
+            <div class="receipt-row">
+              <dt>Tiền cước tuyến × Hệ số hàng</dt>
+              <dd id="vicBaseReward" class="tabular-nums">1.000.000 VNĐ</dd>
+            </div>
+            <div class="receipt-row">
+              <dt>Thưởng bảo quản hàng</dt>
+              <dd id="vicCargoBonus" class="tabular-nums">+288.000 VNĐ</dd>
+            </div>
+            <div class="receipt-row">
+              <dt>Thưởng tốc độ (thời gian dư)</dt>
+              <dd id="vicSpeedBonus" class="tabular-nums">+175.000 VNĐ</dd>
+            </div>
+            <div class="receipt-row receipt-total">
+              <dt>Tổng thực nhận &amp; Uy tín</dt>
+              <dd id="vicTotalReward" class="tabular-nums text-amber">1.463.000 VNĐ (+46 uy tín)</dd>
+            </div>
+          </dl>
+
+          <div class="modal-actions-row">
+            <button type="button" id="btnVictoryMenu" class="btn-secondary">Về Menu chính</button>
+            <button type="button" id="btnVictoryNext" class="btn-primary">Tuyến tiếp theo</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- GAME OVER MODAL (SU CO GIAO HANG) -->
+      <section id="gameOverModal" class="modal-backdrop hidden" aria-label="Sự cố giao hàng">
+        <div class="modal-card modal-sm">
+          <h2 class="modal-title text-danger">Sự Cố Giao Hàng</h2>
+          <p class="gameover-reason" id="gameOverReason">Xe đã cạn nhiên liệu trước khi tới cửa khẩu.</p>
+          <div class="gameover-stats" id="gameOverStats"></div>
+          <div class="modal-actions-col">
+            <button type="button" id="btnRetryTrip" class="btn-primary">Chạy lại ngay</button>
+            <button type="button" id="btnGameOverGarage" class="btn-secondary">Vào Garage nâng cấp</button>
+            <button type="button" id="btnGameOverMenu" class="btn-ghost">Về Menu chính</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
